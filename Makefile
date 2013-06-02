@@ -2,7 +2,7 @@ TESTS = test/*
 REPORTER = spec
 
 test:
-	@COVERAGE= NODE_ENV=test mocha \
+	@COVERAGE= mocha \
 		--reporter $(REPORTER) \
 		--timeout 0 \
 		--growl \
@@ -49,7 +49,7 @@ coverage:
 	@# move original src code and replace it by the instrumented one
 	mv lib lib-orig && mv lib-cov lib
 	@# tell istanbul to only generate the lcov file
-	NODE_ENV=test ISTANBUL_REPORTERS=lcovonly mocha -R mocha-istanbul $(TESTS)
+	ISTANBUL_REPORTERS=lcovonly mocha -R mocha-istanbul $(TESTS)
 	@# place the lcov report in the report folder, remove instrumented code
 	@# and reput src at its place
 	mv lcov.info reports/coverage.lcov

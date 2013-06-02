@@ -8,6 +8,9 @@ atlassian-ide-plugin.xml
 .idea/
 *.log
 .settings
+.sonar
+reports/
+lib-cov/
 node_modules
 tools
 npm-debug.log
