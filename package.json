@@ -1,0 +1,27 @@
+{
+  "name": "node-disco",
+  "version": "0.0.1",
+  "description": "Network discovery helper",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:diversario/node-disco.git"
+  },
+  "keywords": [
+    "udp",
+    "discovery",
+    "multicast"
+  ],
+  "author": "Ilya Shaisultanov <ilya.shaisultanov@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "~1.2.1",
+    "debug": "~0.7.2"
+  },
+  "devDependencies": {
+    "xunit-file": "0.0.3"
+  }
+}

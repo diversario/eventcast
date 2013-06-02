@@ -1,0 +1,1 @@
+module.exports = process.env['COVERAGE_NODE_DISCO'] ? require ('./lib-cov') : require('./lib');
