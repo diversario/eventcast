@@ -10,7 +10,7 @@ describe('Default announcements', function () {
         , server2 = new Disco
         , messageCount = 0
       
-      assert.notEqual(server1.getId(), server2.getId())
+      assert.notEqual(server1.id, server2.id)
       
       ;[server1, server2].forEach(function(server){
         server.on('message', function(msg){
@@ -34,7 +34,7 @@ describe('Default announcements', function () {
         , server2 = Disco(opts)
         , messageCount = 0
 
-      assert.notEqual(server1.getId(), server2.getId())
+      assert.notEqual(server1.id, server2.id)
 
       ;[server1, server2].forEach(function(server){
         server.on('message', function(msg){
