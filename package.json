@@ -1,7 +1,7 @@
 {
   "name": "node-disco",
   "version": "0.0.1",
-  "description": "Network discovery helper",
+  "description": "Network discovery and messaging helper",
   "main": "index.js",
   "scripts": {
     "test": "make test"
@@ -15,11 +15,15 @@
     "discovery",
     "multicast"
   ],
-  "author": "Ilya Shaisultanov <ilya.shaisultanov@gmail.com>",
+  "author": {
+    "name": "Ilya Shaisultanov",
+    "email": "ilya.shaisultanov@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
-    "lodash": "~1.2.1",
-    "debug": "~0.7.2"
+    "lodash": "1.3.x",
+    "debug": "~0.7.2",
+    "ip": "~0.1.0"
   },
   "devDependencies": {
     "xunit-file": "0.0.3"

@@ -5,16 +5,19 @@ var Disco = require('../')
 
 describe('Default announcements', function () {
   describe('Two instances', function () {
-    it('can each other', function (done) {
-      var server1 = new Disco
-        , server2 = new Disco
+    it('can see each other, encrypted body', function (done) {
+      var server1 = new Disco({encrypt: {'key': 'qwqweqweqweq'}})
+        , server2 = new Disco({encrypt: {'key': 'qwqweqweqweq'}})
         , messageCount = 0
       
       assert.notEqual(server1.id, server2.id)
       
+      server1.set({name: 'message', interval: 2000}, 'default discovery message')
+      server2.set({name: 'message', interval: 2000}, 'default discovery message')
+      
       ;[server1, server2].forEach(function(server){
         server.on('message', function(msg){
-          assert(/default discovery/i.test(msg))
+          assert(/default discovery/i.test(msg.payload))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
@@ -28,7 +31,7 @@ describe('Default announcements', function () {
       })
     })
     
-    it('do not interfere with each other', function (done) {
+    it('do not interfere with each other, plaintext body', function (done) {
       var opts = {multicastLoopback: true, port: Disco.getRandomPort()}
         , server1 = Disco(opts)
         , server2 = Disco(opts)
@@ -36,9 +39,12 @@ describe('Default announcements', function () {
 
       assert.notEqual(server1.id, server2.id)
 
+      server1.set({name: 'message', interval: 2000}, 'default discovery message')
+      server2.set({name: 'message', interval: 2000}, 'default discovery message')
+      
       ;[server1, server2].forEach(function(server){
         server.on('message', function(msg){
-          assert(/default discovery/i.test(msg))
+          assert(/default discovery/i.test(msg.payload))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
