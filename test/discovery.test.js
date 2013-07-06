@@ -27,7 +27,7 @@ describe('Default announcements', function () {
 
       ;[server1, server2].forEach(function(server){
         server.on('discovered', function(msg){
-          assert(/^hello$/.test(msg.payload))
+          assert(/^hello$/.test(msg.payload()))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
@@ -51,7 +51,7 @@ describe('Default announcements', function () {
 
       ;[server1, server2].forEach(function(server){
         server.on('discovered', function(msg){
-          assert(/^hello$/.test(msg.payload))
+          assert(/^hello$/.test(msg.payload()))
           if (++messageCount == 6) {
             getNodeList()
           }
@@ -96,7 +96,7 @@ describe('Default announcements', function () {
       
       ;[server1, server2].forEach(function(server){
         server.on('heyoo', function(msg){
-          assert(/howdy neighborino!/i.test(msg.payload))
+          assert(/howdy neighborino!/i.test(msg.payload()))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
@@ -123,7 +123,7 @@ describe('Default announcements', function () {
       
       ;[server1, server2].forEach(function(server){
         server.on('updog', function(msg){
-          assert(/what's updog\?/i.test(msg.payload))
+          assert(/what's updog\?/i.test(msg.payload()))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
@@ -133,8 +133,35 @@ describe('Default announcements', function () {
       })
 
       server1.start(function(){
-        server2.start();
-      });
+        server2.start()
+      })
+    })
+
+    it('works without payload', function (done) {
+      var opts = getOpts()
+        , server1 = Disco(opts)
+        , server2 = Disco(opts)
+        , messageCount = 0
+
+      assert.notEqual(server1.id, server2.id)
+
+      server1.set({name: 'updog', interval: 2000})
+      server2.set({name: 'updog', interval: 2000})
+
+      ;[server1, server2].forEach(function(server){
+        server.on('updog', function(msg){
+          assert.equal(msg.payload(), null)
+          if (++messageCount == 2) {
+            server1.stop(function(){
+              server2.stop(done)
+            })
+          }
+        })
+      })
+
+      server1.start(function(){
+        server2.start()
+      })
     })
   })
 })

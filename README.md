@@ -17,19 +17,24 @@ Network discovery and messaging.
 `disco` can be used as a part of your project.
 
 ```javascript
-var disco = Disco(32768)
+var disco = Disco(32768) // port
 
 disco.on('discovered', function(info){
   // `info` contains information about some remote
   // Disco instance
+  myApp.registerNode(info)
 })
 
 disco.set(
   {event: "hello world", interval: 2000},
   "send this string along with the message",
   function(msg){
-    // invoked when your instance receives event
-    // "hello world"
+    console.log(
+      'Received a message from', 
+      msg.address,
+      'with payload',
+      msg.payload
+    )
   }
 )
 
