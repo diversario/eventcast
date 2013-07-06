@@ -8,7 +8,7 @@ In development
 
 # Disco
 
-Network discovery utility.
+Network discovery and messaging.
 
     npm install disco
     
@@ -17,15 +17,21 @@ Network discovery utility.
 `disco` can be used as a part of your project.
 
 ```javascript
-var disco = Disco()
+var disco = Disco(32768)
 
-disco.on('message', function(message){
-  // do something about the message
-  // maybe send one yourself
-  disco.send('I hear ya!')
+disco.on('discovered', function(info){
+  // `info` contains information about some remote
+  // Disco instance
 })
 
-disco.message = 'My process ID is' + process.pid
+disco.set(
+  {event: "hello world", interval: 2000},
+  "send this string along with the message",
+  function(msg){
+    // invoked when your instance receives event
+    // "hello world"
+  }
+)
 
 disco.start()
 ```

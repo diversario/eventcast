@@ -18,7 +18,7 @@ describe('Default announcements', function () {
   
   describe('Two instances', function () {
     it('emit messages', function (done) {
-      var opts = getOpts()
+      var opts = Disco.getRandomPort()
         , server1 = new Disco(opts)
         , server2 = new Disco(opts)
         , messageCount = 0
@@ -26,7 +26,7 @@ describe('Default announcements', function () {
       assert.notEqual(server1.id, server2.id)
 
       ;[server1, server2].forEach(function(server){
-        server.on('disco:announce', function(msg){
+        server.on('discovered', function(msg){
           assert(/^hello$/.test(msg.payload))
           if (++messageCount == 2) {
             server1.stop(function(){
@@ -42,7 +42,7 @@ describe('Default announcements', function () {
     })
 
     it('register each other', function (done) {
-      var opts = getOpts()
+      var opts = Disco.getRandomPort()
         , server1 = new Disco(opts)
         , server2 = new Disco(opts)
         , messageCount = 0
@@ -50,7 +50,7 @@ describe('Default announcements', function () {
       assert.notEqual(server1.id, server2.id)
 
       ;[server1, server2].forEach(function(server){
-        server.on('disco:announce', function(msg){
+        server.on('discovered', function(msg){
           assert(/^hello$/.test(msg.payload))
           if (++messageCount == 6) {
             getNodeList()
@@ -91,12 +91,12 @@ describe('Default announcements', function () {
       
       assert.notEqual(server1.id, server2.id)
       
-      server1.set({name: 'message', interval: 2000}, 'default discovery message')
-      server2.set({name: 'message', interval: 2000}, 'default discovery message')
+      server1.set({name: 'heyoo', interval: 2000}, 'howdy neighborino!')
+      server2.set({name: 'heyoo', interval: 2000}, 'howdy neighborino!')
       
       ;[server1, server2].forEach(function(server){
-        server.on('message', function(msg){
-          assert(/default discovery/i.test(msg.payload))
+        server.on('heyoo', function(msg){
+          assert(/howdy neighborino!/i.test(msg.payload))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
@@ -118,12 +118,12 @@ describe('Default announcements', function () {
 
       assert.notEqual(server1.id, server2.id)
 
-      server1.set({name: 'message', interval: 2000}, 'default discovery message')
-      server2.set({name: 'message', interval: 2000}, 'default discovery message')
+      server1.set({name: 'updog', interval: 2000}, "what's updog?")
+      server2.set({name: 'updog', interval: 2000}, "what's updog?")
       
       ;[server1, server2].forEach(function(server){
-        server.on('message', function(msg){
-          assert(/default discovery/i.test(msg.payload))
+        server.on('updog', function(msg){
+          assert(/what's updog\?/i.test(msg.payload))
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
