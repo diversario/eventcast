@@ -29,6 +29,13 @@ describe('Default announcements', function () {
     assert(msg.header().version == Disco.protocolVersion)
     assert(msg.header().encrypted == (opts && opts.encrypted ? 1 : 0))
   }
+
+  function checkMeta(msg, opts) {
+    if (opts && opts.encrypted) {
+      assert(msg.meta().nonce)
+      assert(msg.meta().nonce.length === 40)
+    }
+  }
   
   describe('Two instances', function () {
     it('emit messages', function (done) {
@@ -110,7 +117,10 @@ describe('Default announcements', function () {
       
       ;[server1, server2].forEach(function(server){
         server.on('heyoo', function(msg){
-          checkMessage(msg, {payload: 'howdy neighborino!', encrypted: true})
+          var opt = {payload: 'howdy neighborino!', encrypted: true}
+          checkMessage(msg, opt)
+          checkMeta(msg, opt)
+          
           if (++messageCount == 2) {
             server1.stop(function(){
               server2.stop(done)
