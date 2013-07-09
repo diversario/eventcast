@@ -16,8 +16,14 @@ function getOpts(custom) {
 
 function checkMessage(msg, opts) {
   if (opts && opts.payload) {
-    var regexp = new RegExp('^' + opts.payload + '$')
-    assert(regexp.test(msg.payload()))
+    if (typeof opts.payload == 'string') {
+      var regexp = new RegExp('^' + opts.payload + '$')
+      assert(regexp.test(msg.payload()))
+    }
+    
+    if (typeof opts.payload == 'object') {
+      assert.deepEqual(opts.payload, msg.payload())
+    }
   } else if (!opts || opts.payload !== null) {
     assert(/^hello$/.test(msg.payload()))
   } else {
@@ -37,8 +43,8 @@ function checkMeta(msg, opts) {
 
 
 
-describe('Default announcements', function () {
-  describe('Two instances', function () {
+describe('Discovery event', function () {
+  describe('Default probe', function () {
     it('register each other', function (done) {
       var opts = Disco.getRandomPort()
         , server1 = new Disco(opts)
@@ -128,6 +134,74 @@ describe('Default announcements', function () {
       })
     })
   })
+  
+  describe('Custom probe', function () {
+    it('uses provided payload string and handler', function (done) {
+      var opts = getOpts()
+        , server1 = Disco(opts)
+        , server2 = Disco(opts)
+        , messageCount = 0
+
+      assert.notEqual(server1.id, server2.id)
+
+      server1.discovery('custom payload', handler)
+      server2.discovery('custom payload', handler)
+
+      function handler(node) {
+        assert(node.id)
+        assert(node.address)
+        if (++messageCount == 4) {
+          server1.stop(function(){
+            server2.stop(done)
+          })
+        }
+      }
+      
+      [server1, server2].forEach(function(server){
+        server.on('discovery', function(msg){
+          checkMessage(msg, {payload: 'custom payload'})
+        })
+      })
+
+      server1.start(function(){
+        server2.start()
+      })
+    })
+    
+    it('uses provided payload object and handler', function (done) {
+      var opts = getOpts()
+        , server1 = Disco(opts)
+        , server2 = Disco(opts)
+        , messageCount = 0
+
+      assert.notEqual(server1.id, server2.id)
+
+      server1.discovery({foo: 'no'}, handler)
+      server2.discovery({foo: 'no'}, handler)
+
+      function handler(node, msg) {
+        assert(node.id)
+        assert(node.address)
+        assert.deepEqual({foo: 'no'}, msg.payload())
+        
+        if (++messageCount == 4) {
+          server1.stop(function(){
+            server2.stop(done)
+          })
+        }
+      }
+
+      [server1, server2].forEach(function(server){
+        server.on('discovery', function(msg){
+          checkMessage(msg, {payload: {foo: 'no'}})
+        })
+      })
+
+      server1.start(function(){
+        server2.start()
+      })
+    })
+  })
 })
 
 
@@ -137,7 +211,7 @@ describe('Default announcements', function () {
 
 
 
-describe('Custom announcements', function () {
+describe('Custom events', function () {
   describe('Two instances', function () {
     it('can see each other, plain-text', function (done) {
       var opts = getOpts()
