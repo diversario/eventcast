@@ -1,6 +1,11 @@
 # Eventcast
 Network event emitter.
 
+  [![Build Status](https://secure.travis-ci.org/diversario/eventcast.png?branch=master)](http://travis-ci.org/diversario/eventcast)
+  [![Coverage Status](https://coveralls.io/repos/diversario/eventcast/badge.png?branch=master)](https://coveralls.io/r/diversario/eventcast?branch=master)
+  [![Dependency Status](https://gemnasium.com/diversario/eventcast.png)](https://gemnasium.com/diversario/eventcast)
+  [![NPM version](https://badge.fury.io/js/eventcast.png)](http://badge.fury.io/js/eventcast)
+
 ```
 npm install eventcast
 ```
@@ -16,7 +21,7 @@ Create an instance of `eventcast` and add some events:
 ```javascript
 var ec = Eventcast(9000) // port 9000
 
-disco.start()
+ec.start()
 
 ec.emit('myevent', 'hello')
 ```
