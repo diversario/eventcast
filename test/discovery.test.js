@@ -1,5 +1,6 @@
 var Disco = require('../')
   , assert = require('assert')
+  , async = require('async')
 
 
 function getOpts(custom) {
@@ -370,5 +371,50 @@ describe('Node list', function () {
     server1.start(function(){
       server2.start()
     })
+  })
+})
+
+
+
+describe('Start/stop', function () {
+  it('does not leak memory', function(done) {
+    var opts = Disco.getRandomPort()
+      , server1 = new Disco(opts)
+      , server2 = new Disco(opts)
+    
+    function stop(fn) {
+      server1.stop(function(){
+        server2.stop(fn)
+      })
+    }
+
+    function start(fn) {
+      server1.start(function(){
+        server2.start(fn)
+      })
+    }
+
+    var i = 1000
+    
+    function loop() {
+      start(function() {
+        setImmediate(function() {
+          stop(function() {
+            --i > 0 ? loop() : test()
+          })
+        })
+      })
+    }
+
+    function test() {
+      assert(server1.listeners('discovery').length === 0)
+      assert(server2.listeners('discovery').length === 0)
+
+      assert(server1.server.listeners('message').length === 0)
+      assert(server2.server.listeners('message').length === 0)
+      done()
+    }
+    
+    loop()
   })
 })
