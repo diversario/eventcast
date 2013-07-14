@@ -1,42 +1,42 @@
----
-
-In development
-
----
-
-[![Dependency Status](https://gemnasium.com/diversario/node-disco.png)](https://gemnasium.com/diversario/node-disco)
-
 # Disco
+Network discovery, messaging and events.
 
-Network discovery and messaging.
+```
+npm install disco
+```
+## How it works
+`disco` instances use UDP multicast to advertise themselves on the network. Advertisement messages may contain information that recipient would need to connect to sender through something other than UDP or anything else.
 
-    npm install disco
-    
-# Usage
+Currently, message size is limited to ~1500 bytes, but support for multipart messages is being researched. Even with this limitation there's enough room for useful data.
 
-`disco` can be used as a part of your project.
+The goal of `disco` is to provide a network event emitter where nodes can dynamically subscribe to events and exchange data. Use `disco` as a part of your project.
+
+## Usage
+
+Create an instance of `disco` and add some events:
 
 ```javascript
-var disco = Disco(32768) // port
+var disco = Disco(9000) // port 9000
 
-disco.on('discovered', function(info){
-  // `info` contains information about some remote
-  // Disco instance
-  myApp.registerNode(info)
+disco.set('myevent', 'hello', function(msg){
+    console.log(msg.payload()) // prints 'hello'
 })
-
-disco.set(
-  {event: "hello world", interval: 2000},
-  "send this string along with the message",
-  function(msg){
-    console.log(
-      'Received a message from', 
-      msg.address,
-      'with payload',
-      msg.payload
-    )
-  }
-)
 
 disco.start()
 ```
+
+## REPL
+`disco` creates a REPL that provides access to all instance methods and properties. REPL binds to a random port unless `replPort` is passed to the constructor.
+
+```
+$ telnet localhost 20001
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+disco> disco.stop()
+true
+disco>
+```
+
+## Configuration
+TODO
