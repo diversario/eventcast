@@ -27,6 +27,9 @@
     "bunyan-prettystream": "~0.1.2"
   },
   "devDependencies": {
-    "xunit-file": "0.0.3"
+    "mocha": "1.x",
+    "istanbul": "~0.1.36",
+    "coveralls": "~2.0.12",
+    "mocha-istanbul": "~0.2.0"
   }
 }
