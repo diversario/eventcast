@@ -1,18 +1,18 @@
 {
-  "name": "node-disco",
+  "name": "eventcast",
   "version": "0.0.1",
-  "description": "Network discovery and messaging helper",
+  "description": "Events over multicast",
   "main": "index.js",
   "scripts": {
     "test": "make test"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:diversario/node-disco.git"
+    "url": "git@github.com:diversario/eventcast.git"
   },
   "keywords": [
     "udp",
-    "discovery",
+    "events",
     "multicast"
   ],
   "author": {

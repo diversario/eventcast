@@ -1,6 +1,6 @@
-var Disco = require('../')
+var Eventcast = require('../')
 
-var server = Disco({
+var server = Eventcast({
   discoveryInterval: 3000,
   port:19999, 
   multicastLoopback: true,

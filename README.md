@@ -1,41 +1,37 @@
-# Disco
-Network discovery, messaging and events.
+# Eventcast
+Network event emitter.
 
 ```
-npm install disco
+npm install eventcast
 ```
 ## How it works
-`disco` instances use UDP multicast to advertise themselves on the network. Advertisement messages may contain information that recipient would need to connect to sender through something other than UDP or anything else.
 
-Currently, message size is limited to ~1500 bytes, but support for multipart messages is being researched. Even with this limitation there's enough room for useful data.
-
-The goal of `disco` is to provide a network event emitter where nodes can dynamically subscribe to events and exchange data. Use `disco` as a part of your project.
+TODO
+The goal of `eventcast` is to provide a network event emitter where nodes can dynamically subscribe to events and exchange data. Use `eventcast` as a part of your project.
 
 ## Usage
 
-Create an instance of `disco` and add some events:
+Create an instance of `eventcast` and add some events:
 
 ```javascript
-var disco = Disco(9000) // port 9000
-
-disco.set('myevent', 'hello', function(msg){
-    console.log(msg.payload()) // prints 'hello'
-})
+var ec = Eventcast(9000) // port 9000
 
 disco.start()
+
+ec.emit('myevent', 'hello')
 ```
 
 ## REPL
-`disco` creates a REPL that provides access to all instance methods and properties. REPL binds to a random port unless `replPort` is passed to the constructor.
+`eventcast` creates a REPL that provides access to all instance methods and properties. REPL binds to a random port unless `replPort` is passed to the constructor.
 
 ```
 $ telnet localhost 20001
 Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
-disco> disco.stop()
+eventcast@hostname> eventcast.stop()
 true
-disco>
+eventcast>
 ```
 
 ## Configuration

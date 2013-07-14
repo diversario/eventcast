@@ -9,9 +9,6 @@ test:
 		--bail \
 		$(TESTS)
 
-test-verbose:
-	@DEBUG=disco $(MAKE) test
-
 test-watch:
 	@NODE_ENV=test mocha \
 		--reporter $(REPORTER) \
