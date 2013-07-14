@@ -1,6 +1,5 @@
 var Disco = require('../')
   , assert = require('assert')
-  , async = require('async')
 
 
 function getOpts(custom) {
