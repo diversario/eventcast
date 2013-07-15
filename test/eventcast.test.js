@@ -5,7 +5,8 @@ var Eventcast = require('../')
 
 function getOpts(custom) {
   var opts = {
-    port: custom && custom.port || Eventcast.getRandomPort()
+    port: custom && custom.port || Eventcast.getRandomPort(),
+    multicastInterface: '127.0.0.1'
   }
   
   custom && Object.keys(custom).forEach(function (k) {
