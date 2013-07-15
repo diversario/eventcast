@@ -1,7 +1,6 @@
 # Eventcast
 Network event emitter.
 
-  [![Build Status](https://secure.travis-ci.org/diversario/eventcast.png?branch=develop)](http://travis-ci.org/diversario/eventcast)
   [![Coverage Status](https://coveralls.io/repos/diversario/eventcast/badge.png?branch=develop)](https://coveralls.io/r/diversario/eventcast?branch=develop)
   [![Dependency Status](https://gemnasium.com/diversario/eventcast.png)](https://gemnasium.com/diversario/eventcast)
   [![NPM version](https://badge.fury.io/js/eventcast.png)](http://badge.fury.io/js/eventcast)
@@ -52,7 +51,7 @@ eventcast>
 TODO. See [default configuration values](lib/Eventcast.js) overridable in the constructor.
 
 ## API
-Eventcast is an instance of Event Emitter, therefore is support [Event Emitter API](http://nodejs.org/api/events.html). Internally, `#emit` is the only method that is not real EE method but a wrapper for `events.EventEmitter.emit` that first sends out messages and then emits the event.
+Eventcast is an instance of Event Emitter, therefore it supports [Event Emitter API](http://nodejs.org/api/events.html). Internally, `#emit` is the only method that is not real EE method but a wrapper for `events.EventEmitter.emit` that first sends out messages and then emits the event.
 
 ### Eventcast#emit(event, [arg1], [arg2], [...])
 Sends out event as `event` with supplied arguments. **Arguments must be serializable into JSON** because they're going to be sent over the network.
