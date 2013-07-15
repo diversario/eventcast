@@ -1,6 +1,6 @@
 ### Example
 
-A simple example that interaction between two servers, as well as Eventcast REPL feature.
+A simple example that shows interaction between two servers as well as Eventcast REPL feature.
 
 Start servers in two terminal windows:
 
