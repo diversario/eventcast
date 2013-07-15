@@ -218,6 +218,8 @@ describe('Sending events', function () {
 
 describe('Start/stop', function () {
   it('does not leak memory', function(done) {
+    this.slow(500)
+    
     var opts = Eventcast.getRandomPort()
       , server1 = new Eventcast(opts)
       , server2 = new Eventcast(opts)
@@ -255,3 +257,105 @@ describe('Start/stop', function () {
     loop()
   })
 })
+
+
+
+
+describe('Errors', function () {
+  describe('incompatible messages', function() {
+    var opts, server1, server2
+
+    beforeEach(function(done) {
+      opts = getOpts()
+
+      server1 = new Eventcast(opts)
+      server2 = new Eventcast(opts)
+
+      server1.start(function(){
+        server2.start(function() {
+          done()
+        })
+      })
+    })
+
+    afterEach(function(done) {
+      server1.stop(function(){
+        server2.stop(done)
+      })
+    })
+
+    it('invalid protocol version', function (done) {
+      this.slow(500)
+      
+      var once = true
+      var v = Eventcast.protocolVersion
+      
+      server1.on('error', function(e) {
+        assert(e.code === 'EPRVERSION')
+        Eventcast.protocolVersion = v
+        
+        // wait for 'foo' to trigger, just in case
+        setTimeout(function() {
+          done()
+        }, 200)
+      })
+
+      server1.on('foo', function(msg) {
+        assert(once)
+        assert(msg === 'bar')
+        once = !once
+      })      
+      
+      server2.on('error', function(e) {}) // so it doesn't crash
+      
+      server1.emit('foo', 'bar')
+      
+      Eventcast.protocolVersion = 420
+    })
+    
+    it('invalid encryption version', function (done) {
+      this.slow(500)
+
+      var once = true
+        , count = 0
+
+      server1.on('error', function(e) {
+        assert(e.code === 'EENCRYPT')
+        server1.config.encrypt = false
+        
+        // wait for 'foo' to trigger, just in case
+        setTimeout(function() {
+          if (++count == 2) done()
+        }, 200)
+      })
+
+      server2.on('error', function(e) {
+        assert(e.code === 'EENCRYPT')
+        server2.config.encrypt = false
+
+        // wait for 'foo' to trigger, just in case
+        setTimeout(function() {
+          if (++count == 2) done()
+        }, 200)
+      })
+      
+      server1.on('foo', function(msg) {
+        assert(once)
+        assert(msg === 'bar')
+        once = !once
+      })
+
+      server2.on('foo', function(msg) {
+        assert(once)
+        assert(msg === 'bar')
+        once = !once
+      })
+      
+      server1.emit('foo', 'bar')
+      
+      server1.config.encrypt = true
+      server2.config.encrypt = true
+    })
+  })
+})
+    
