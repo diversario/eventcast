@@ -1,6 +1,12 @@
 var Eventcast = require('../')
   , assert = require('assert')
   , net = require('net')
+  , cp = require('child_process')
+
+
+cp.execFile('ifconfig', function(err, res) {
+  console.log(err, res.split('\n\t'))
+})
 
 
 function getOpts(custom) {
