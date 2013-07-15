@@ -1,5 +1,6 @@
 var Eventcast = require('../')
   , assert = require('assert')
+  , net = require('net')
 
 
 function getOpts(custom) {
@@ -52,7 +53,7 @@ describe('Sending events', function () {
       opts = getOpts()
 
       server1 = new Eventcast(opts)
-      server2 = new Eventcast(opts)
+      server2 = Eventcast(opts) // call without new
       
       server1.start(function(){
         server2.start(function() {
@@ -217,6 +218,47 @@ describe('Sending events', function () {
 
 
 describe('Start/stop', function () {
+  it('do not require callbacks', function(done) {
+    var opts = Eventcast.getRandomPort()
+      , server1 = new Eventcast(opts)
+      , server2 = new Eventcast(opts)
+
+    server1.start()
+    server2.start()
+    
+    setImmediate(function() {
+      server1.stop()
+      server2.stop()
+      
+      setImmediate(function() {
+        done()
+      })
+    })
+  });
+
+  it('are idempotent', function(done) {
+    var opts = Eventcast.getRandomPort()
+      , server1 = new Eventcast(opts)
+
+    server1.start()
+    server1.start()
+    server1.start()
+    server1.start()
+
+    setImmediate(function() {
+      server1.start()
+      server1.stop()
+      server1.stop()
+      server1.stop()
+      server1.stop()
+
+      setImmediate(function() {
+        server1.stop()
+        done()
+      })
+    })
+  });
+
   it('does not leak memory', function(done) {
     this.slow(500)
     
@@ -357,5 +399,99 @@ describe('Errors', function () {
       server2.config.encrypt = true
     })
   })
+
+  it('emit when server is stopped', function(done) {
+    var server1 = new Eventcast()
+
+    server1.on('foo', done)
+    
+    server1.emit('foo')
+  })
+})
+
+
+
+describe('Log level', function() {
+  it('get', function() {
+    var server1 = new Eventcast()
+    
+    // 60 because it's set in lib/Logger to 60 when NODE_ENV=test
+    assert.deepEqual(server1.logLevel(), [60])
+  })
+  
+  it('set level', function() {
+    var server1 = new Eventcast()
+
+    server1.logLevel(50)
+    assert.deepEqual(server1.logLevel(), [50])
+  })
+  
+  it('set level and component', function() {
+    var server1 = new Eventcast()
+
+    server1.logLevel('eventcast', 50)
+    assert.deepEqual(server1.logLevel(), [50])
+  })
+  
+  it('set invalid', function() {
+    var server1 = new Eventcast()
+
+    // nothing happens
+    server1.logLevel(9001)
+  })
 })
     
+
+
+describe('REPL', function() {
+  it('accepts connections', function(done) {
+    var counter = 0
+    
+    var server1 = new Eventcast({
+      replPort: 33333
+    })
+
+    setTimeout(function() {
+      var sock = net.connect(33333)
+
+      sock.on('connect', function () {
+        setTimeout(function() {
+          sock.destroy()
+        }, 200)
+      })
+    }, 500)
+
+    server1.on('replConnected', function() {
+      assert(server1.replClients === 1)
+      counter++
+    })
+
+    server1.on('replDisonnected', function() {
+      assert(server1.replClients === 0)
+      counter++
+      assert(counter === 2)
+      done()
+    })
+  })
+})
+
+
+describe('Utilities', function() {
+  it('getRandomPort', function() {
+    var i = 1000000
+      , p
+    
+    while (--i > 0) {
+      p = Eventcast.getRandomPort() 
+      assert(p >= 49152 && p<= 65535)
+    }
+
+
+    i = 10000
+    while (--i > 0) {
+      p = Eventcast.getRandomPort(1, 10)
+      assert(p >= 1 && p<= 10)
+    }
+  })
+})
+  
