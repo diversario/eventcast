@@ -1,6 +1,7 @@
 # Eventcast
 Network event emitter.
 
+  [![Build Status](https://secure.travis-ci.org/diversario/eventcast.png?branch=develop)](http://travis-ci.org/diversario/eventcast)
   [![Coverage Status](https://coveralls.io/repos/diversario/eventcast/badge.png?branch=develop)](https://coveralls.io/r/diversario/eventcast?branch=develop)
   [![Dependency Status](https://gemnasium.com/diversario/eventcast.png)](https://gemnasium.com/diversario/eventcast)
   [![NPM version](https://badge.fury.io/js/eventcast.png)](http://badge.fury.io/js/eventcast)
