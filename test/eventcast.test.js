@@ -1,18 +1,10 @@
 var Eventcast = require('../')
   , assert = require('assert')
   , net = require('net')
-  , cp = require('child_process')
-
-
-cp.execFile('ifconfig', function(err, res) {
-  console.log(err, res.split('\n\t'))
-})
-
 
 function getOpts(custom) {
   var opts = {
-    port: custom && custom.port || Eventcast.getRandomPort(),
-    multicastInterface: process.env.TRAVIS ? '172.0.0.1' : '127.0.0.1'
+    port: custom && custom.port || Eventcast.getRandomPort()
   }
   
   custom && Object.keys(custom).forEach(function (k) {
