@@ -43,6 +43,15 @@ function checkMeta(msg, opts) {
 
 
 
+function getBytes(n) {
+  var s = ''
+  
+  while (s.length < n) s += 'a'
+  return s
+}
+
+
+
 
 describe('Sending events', function () {
   describe('Plain text', function () {
@@ -216,7 +225,57 @@ describe('Sending events', function () {
 
 
 
-describe('Start/stop', function () {
+
+describe.only('Large data', function () {
+  describe('10KB', function () {
+    var opts, server1, server2
+
+    beforeEach(function(done) {
+      opts = getOpts()
+
+      server1 = new Eventcast(opts)
+      server2 = Eventcast(opts) // call without new
+
+      server1.start(function(){
+        server2.start(function() {
+          done()
+        })
+      })
+    })
+
+    afterEach(function(done) {
+      server1.stop(function(){
+        server2.stop(done)
+      })
+    })
+
+    it('is received', function (done) {
+      var messageCount = 0
+        , str = getBytes(1024 * 10)
+
+      assert.notEqual(server1.id, server2.id)
+
+      ;[server1, server2].forEach(function(server){
+        server.on('longstring', function(msg){
+          assert(msg === str)
+
+          if (++messageCount == 4) {
+            done()
+          }
+        })
+      })
+
+      server1.emit('longstring', str)
+      server2.emit('longstring', str)
+    })
+  })
+})
+
+
+
+
+
+    describe('Start/stop', function () {
   it('do not require callbacks', function(done) {
     var opts = Eventcast.getRandomPort()
       , server1 = new Eventcast(opts)
@@ -353,51 +412,6 @@ describe('Errors', function () {
       
       Eventcast.protocolVersion = 420
     })
-    
-    // this one should test for bad encryption
-//    it('invalid encryption version', function (done) {
-//      this.slow(500)
-//
-//      var once = true
-//        , count = 0
-//
-//      server1.on('error', function(e) {
-//        assert(e.code === 'EENCRYPT')
-//        server1.config.encrypt = false
-//        
-//        // wait for 'foo' to trigger, just in case
-//        setTimeout(function() {
-//          if (++count == 2) done()
-//        }, 200)
-//      })
-//
-//      server2.on('error', function(e) {
-//        assert(e.code === 'EENCRYPT')
-//        server2.config.encrypt = false
-//
-//        // wait for 'foo' to trigger, just in case
-//        setTimeout(function() {
-//          if (++count == 2) done()
-//        }, 200)
-//      })
-//      
-//      server1.on('foo', function(msg) {
-//        assert(once)
-//        assert(msg === 'bar')
-//        once = !once
-//      })
-//
-//      server2.on('foo', function(msg) {
-//        assert(once)
-//        assert(msg === 'bar')
-//        once = !once
-//      })
-//      
-//      server1.emit('foo', 'bar')
-//      
-//      server1.config.encrypt = true
-//      server2.config.encrypt = true
-//    })
   })
 
   it('emit when server is stopped', function(done) {
@@ -453,10 +467,11 @@ describe('REPL', function() {
 
     setTimeout(function() {
       var sock = net.connect(33333)
+      sock.setNoDelay(true)
 
       sock.on('connect', function () {
         setTimeout(function() {
-          sock.destroy()
+          sock.end()
         }, 200)
       })
     }, 500)
