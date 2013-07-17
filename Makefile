@@ -12,7 +12,7 @@ coverage:
 	@mv lcov.info reports
 	@mv lcov-report reports
 	@rm -rf lib-cov
-	@if [ -f "$(which open)" ] && [ $TRAVIS != true ]; then open reports/lcov-report/index.html; fi
+	@if [ -f "`which open`"  ] && [ "${TRAVIS}" != "true" ]; then open reports/lcov-report/index.html; fi
 
 coveralls: test coverage
 	@cat reports/lcov.info | ./node_modules/coveralls/bin/coveralls.js
