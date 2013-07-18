@@ -462,12 +462,12 @@ describe('REPL', function() {
     }, 500)
 
     server1.on('replConnected', function() {
-      assert(server1.replClients === 1)
+      assert(server1.clients() === 1)
       counter++
     })
 
-    server1.on('replDisonnected', function() {
-      assert(server1.replClients === 0)
+    server1.on('replDisconnected', function() {
+      assert(server1.clients() === 0)
       counter++
       assert(counter === 2)
       done()
