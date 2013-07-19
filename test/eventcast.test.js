@@ -295,10 +295,16 @@ describe('Message chunking', function () {
         getAddress: function(){return 'localhost:123'}
       })
 
-      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      var incomingMessageArray = []
+
+      _om.forEach(function (m) {
+        incomingMessageArray.push(new Message.IncomingMessage(m))
+      })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(om)
+      var originalMessage = new Message.IncomingMessage(incomingMessageArray)
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -383,10 +389,16 @@ describe('Message chunking', function () {
         getAddress: function(){return 'localhost:123'}
       })
 
-      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      var incomingMessageArray = []
+
+      _om.forEach(function (m) {
+        incomingMessageArray.push(new Message.IncomingMessage(m))
+      })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(om)
+      var originalMessage = new Message.IncomingMessage(incomingMessageArray)
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
