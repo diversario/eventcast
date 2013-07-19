@@ -227,65 +227,179 @@ describe('Sending events', function () {
 
 
 
-describe.only('Message chunking', function () {
-  it('Returns an array of messages with chunked payload', function () {
-    var Message = require('../lib/Message')({
-      config: {encrypt: false, maxPayloadSize: 3}, 
-      getAddress: function(){return 'localhost:123'} 
-    })
-    
-    var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
-    
-    // let's reassemble the message
-    var reassembledMessage = Buffer(0)
-    
-    // concatenate the payload chunks
-    // and assert some things
-    
-    var lastSeq = 0
-      , lastSeqId
-      , lastSeqEnd
-      , totalMsg = om.length
-    
-    om.forEach(function (m, idx) {
-      var metaLength = m.slice(0,2).readInt16BE(0)
-      var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+describe('Message chunking', function () {
+  describe('Plain text', function () {
+    it('Returns an array of messages with chunked payload', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: false, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
 
-      if (idx === 0) {
-        lastSeq = meta.seq
-        lastSeqId = meta.seqId
-        lastSeqEnd = meta.seqEnd
-      }
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
 
-      assert(meta.seq === idx)
-      assert(meta.seqId === lastSeqId)
-      
-      if (idx === totalMsg-1) assert(meta.seqEnd === true)
-      else assert(meta.seqEnd === false)
-      
-      var payload = m.slice(2+metaLength)
-      reassembledMessage = Buffer.concat([reassembledMessage, payload])
+      // let's reassemble the message
+      var reassembledMessage = Buffer(0)
+
+      // concatenate the payload chunks
+      // and assert some things
+
+      var lastSeq = 0
+        , lastSeqId
+        , lastSeqEnd
+        , totalMsg = om.length
+
+      om.forEach(function (m, idx) {
+        var metaLength = m.slice(0,2).readInt16BE(0)
+        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+
+        if (idx === 0) {
+          lastSeq = meta.seq
+          lastSeqId = meta.seqId
+          lastSeqEnd = meta.seqEnd
+        }
+
+        assert(meta.seq === idx)
+        assert(meta.seqId === lastSeqId)
+
+        if (idx === totalMsg-1) assert(meta.seqEnd === true)
+        else assert(meta.seqEnd === false)
+
+        var payload = m.slice(2+metaLength)
+        reassembledMessage = Buffer.concat([reassembledMessage, payload])
+      })
+
+      // slice out the payload
+      var header = reassembledMessage.slice(0, 2)
+      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var payload = reassembledMessage.slice(2 + meta.length)
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(payload)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
     })
-    
-    // slice out the payload
-    var header = reassembledMessage.slice(0, 2)
-    var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
-    var payload = reassembledMessage.slice(2 + meta.length)
-    
-    // let IM handle the parsing here
-    var originalMessage = new Message.IncomingMessage(payload)
-    
-    var omHeader = originalMessage.header()
-    var omMeta = originalMessage.meta()
-    var omPayload = originalMessage.payload()
-    
-    assert(omHeader.metaLength === JSON.stringify(omMeta).length)
-    
-    assert(omMeta.name === 'msg')
-    assert(omMeta.seq === 0)
-    assert(omMeta.address === 'localhost:123')
-    
-    assert(omPayload === '123456789')
+
+    it('Same test but using IncomingMessage', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: false, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(om)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+  })
+  
+  
+  
+  describe('Encrypted', function () {
+    it('Returns an array of messages with chunked payload', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: {key: 'WIKILEAKS'}, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      // let's reassemble the message
+      var reassembledMessage = Buffer(0)
+
+      // concatenate the payload chunks
+      // and assert some things
+
+      var lastSeq = 0
+        , lastSeqId
+        , lastSeqEnd
+        , totalMsg = om.length
+
+      om.forEach(function (m, idx) {
+        var metaLength = m.slice(0,2).readInt16BE(0)
+        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+
+        if (idx === 0) {
+          lastSeq = meta.seq
+          lastSeqId = meta.seqId
+          lastSeqEnd = meta.seqEnd
+        }
+
+        assert(meta.seq === idx)
+        assert(meta.seqId === lastSeqId)
+
+        if (idx === totalMsg-1) assert(meta.seqEnd === true)
+        else assert(meta.seqEnd === false)
+
+        var payload = m.slice(2+metaLength)
+        reassembledMessage = Buffer.concat([reassembledMessage, payload])
+      })
+
+      // slice out the payload
+      var header = reassembledMessage.slice(0, 2)
+      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var payload = reassembledMessage.slice(2 + meta.length)
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(payload)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+
+    it('Same test but using IncomingMessage', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: {key: 'SNIFF THIS'}, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(om)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
   })
 })
 
