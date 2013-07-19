@@ -226,7 +226,55 @@ describe('Sending events', function () {
 
 
 
-describe.only('Large data', function () {
+
+describe.only('Message chunking', function () {
+  it('Returns an array of messages with chunked payload', function () {
+    var Message = require('../lib/Message')({
+      config: {encrypt: false, maxPayloadSize: 3}, 
+      getAddress: function(){return 'localhost:123'} 
+    })
+    
+    var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+    
+    // let's reassemble the message
+    var reassembledMessage = Buffer(0)
+    var headerLength = om[0].slice(0,2).readInt16BE(0) + 2
+    
+    // concatenate the payload chunks
+    om.forEach(function (m) {
+      var chunk = m.slice(headerLength)
+      reassembledMessage = Buffer.concat([reassembledMessage, chunk])
+    })
+    
+    // slice out the payload
+    var header = reassembledMessage.slice(0, 2)
+    var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+    var payload = reassembledMessage.slice(2 + meta.length)
+    
+    // let IM handle the parsing here
+    var originalMessage = new Message.IncomingMessage(payload)
+    
+    var omHeader = originalMessage.header()
+    var omMeta = originalMessage.meta()
+    var omPayload = originalMessage.payload()
+    
+    assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+    
+    assert(omMeta.name === 'msg')
+    assert(omMeta.seq === 0)
+    assert(omMeta.address === 'localhost:123')
+    
+    assert(omPayload === '123456789')
+  })
+})
+
+
+describe.skip("Unicode chars in payload", function () {
+
+})
+
+
+describe.skip('Large data', function () {
   describe('10KB', function () {
     var opts, server1, server2
 
@@ -275,7 +323,7 @@ describe.only('Large data', function () {
 
 
 
-    describe('Start/stop', function () {
+describe('Start/stop', function () {
   it('do not require callbacks', function(done) {
     var opts = Eventcast.getRandomPort()
       , server1 = new Eventcast(opts)
@@ -292,7 +340,7 @@ describe.only('Large data', function () {
         done()
       })
     })
-  });
+  })
 
   it('are idempotent', function(done) {
     var opts = Eventcast.getRandomPort()
@@ -315,7 +363,7 @@ describe.only('Large data', function () {
         done()
       })
     })
-  });
+  })
 
   it('does not leak memory', function(done) {
     this.slow(500)
