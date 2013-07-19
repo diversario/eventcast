@@ -297,14 +297,12 @@ describe('Message chunking', function () {
 
       var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
 
-      var incomingMessageArray = []
-
       _om.forEach(function (m) {
-        incomingMessageArray.push(new Message.IncomingMessage(m))
+        Message.buffer(new Message.IncomingMessage(m))
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(incomingMessageArray)
+      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -391,14 +389,12 @@ describe('Message chunking', function () {
 
       var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
 
-      var incomingMessageArray = []
-
       _om.forEach(function (m) {
-        incomingMessageArray.push(new Message.IncomingMessage(m))
+        Message.buffer(new Message.IncomingMessage(m))
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(incomingMessageArray)
+      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -421,32 +417,34 @@ describe.skip("Unicode chars in payload", function () {
 })
 
 
-describe.skip('Large data', function () {
-  describe('10KB', function () {
-    var opts, server1, server2
+describe('Multipart data', function () {
+  var opts, server1, server2
 
-    beforeEach(function(done) {
-      opts = getOpts()
+  beforeEach(function(done) {
+    opts = getOpts()
 
-      server1 = new Eventcast(opts)
-      server2 = Eventcast(opts) // call without new
+    server1 = new Eventcast(opts)
+    server2 = Eventcast(opts) // call without new
 
-      server1.start(function(){
-        server2.start(function() {
-          done()
-        })
+    server1.start(function(){
+      server2.start(function() {
+        done()
       })
     })
+  })
 
-    afterEach(function(done) {
-      server1.stop(function(){
-        server2.stop(done)
-      })
+  afterEach(function(done) {
+    server1.stop(function(){
+      server2.stop(done)
     })
+  })
 
-    it('is received', function (done) {
+  ;[1, 10, 100, 1000].forEach(function (size) {
+    it(size + 'KB is received', function (done) {
+      this.timeout(3000)
+      
       var messageCount = 0
-        , str = getBytes(1024 * 10)
+        , str = getBytes(1024 * size)
 
       assert.notEqual(server1.id, server2.id)
 
