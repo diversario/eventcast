@@ -25,7 +25,8 @@
     "ip": "0.1.x",
     "bunyan": "~0.21.4",
     "bunyan-prettystream": "~0.1.2",
-    "replize": "0.0.4"
+    "replize": "0.0.4",
+    "async": "~0.2.9"
   },
   "devDependencies": {
     "mocha": "1.x",
