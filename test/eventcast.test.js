@@ -43,6 +43,15 @@ function checkMeta(msg, opts) {
 
 
 
+function getBytes(n) {
+  var s = ''
+  
+  while (s.length < n) s += 'a'
+  return s
+}
+
+
+
 
 describe('Sending events', function () {
   describe('Plain text', function () {
@@ -216,6 +225,249 @@ describe('Sending events', function () {
 
 
 
+
+
+describe('Message chunking', function () {
+  describe('Plain text', function () {
+    it('Returns an array of messages with chunked payload', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: false, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      // let's reassemble the message
+      var reassembledMessage = Buffer(0)
+
+      // concatenate the payload chunks
+      // and assert some things
+
+      var lastSeq = 0
+        , lastSeqId
+        , lastSeqEnd
+        , totalMsg = om.length
+
+      om.forEach(function (m, idx) {
+        var metaLength = m.slice(0,2).readInt16BE(0)
+        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+
+        if (idx === 0) {
+          lastSeq = meta.seq
+          lastSeqId = meta.seqId
+          lastSeqEnd = meta.seqEnd
+        }
+
+        assert(meta.seq === idx)
+        assert(meta.seqId === lastSeqId)
+
+        if (idx === totalMsg-1) assert(meta.seqEnd === true)
+        else assert(meta.seqEnd === false)
+
+        var payload = m.slice(2+metaLength)
+        reassembledMessage = Buffer.concat([reassembledMessage, payload])
+      })
+
+      // slice out the payload
+      var header = reassembledMessage.slice(0, 2)
+      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var payload = reassembledMessage.slice(2 + meta.length)
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(payload)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+
+    it('Same test but using IncomingMessage', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: false, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      _om.forEach(function (m) {
+        Message.buffer(new Message.IncomingMessage(m))
+      })
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+  })
+  
+  
+  
+  describe('Encrypted', function () {
+    it('Returns an array of messages with chunked payload', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: {key: 'WIKILEAKS'}, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      // let's reassemble the message
+      var reassembledMessage = Buffer(0)
+
+      // concatenate the payload chunks
+      // and assert some things
+
+      var lastSeq = 0
+        , lastSeqId
+        , lastSeqEnd
+        , totalMsg = om.length
+
+      om.forEach(function (m, idx) {
+        var metaLength = m.slice(0,2).readInt16BE(0)
+        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+
+        if (idx === 0) {
+          lastSeq = meta.seq
+          lastSeqId = meta.seqId
+          lastSeqEnd = meta.seqEnd
+        }
+
+        assert(meta.seq === idx)
+        assert(meta.seqId === lastSeqId)
+
+        if (idx === totalMsg-1) assert(meta.seqEnd === true)
+        else assert(meta.seqEnd === false)
+
+        var payload = m.slice(2+metaLength)
+        reassembledMessage = Buffer.concat([reassembledMessage, payload])
+      })
+
+      // slice out the payload
+      var header = reassembledMessage.slice(0, 2)
+      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var payload = reassembledMessage.slice(2 + meta.length)
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(payload)
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+
+    it('Same test but using IncomingMessage', function () {
+      var Message = require('../lib/Message')({
+        config: {encrypt: {key: 'SNIFF THIS'}, maxPayloadSize: 3},
+        getAddress: function(){return 'localhost:123'}
+      })
+
+      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+
+      _om.forEach(function (m) {
+        Message.buffer(new Message.IncomingMessage(m))
+      })
+
+      // let IM handle the parsing here
+      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
+
+      var omHeader = originalMessage.header()
+      var omMeta = originalMessage.meta()
+      var omPayload = originalMessage.payload()
+
+      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+
+      assert(omMeta.name === 'msg')
+      assert(omMeta.seq === 0)
+      assert(omMeta.address === 'localhost:123')
+
+      assert(omPayload === '123456789')
+    })
+  })
+})
+
+
+describe.skip("Unicode chars in payload", function () {
+
+})
+
+
+describe('Multipart data', function () {
+  var opts, server1, server2
+
+  beforeEach(function(done) {
+    opts = getOpts()
+
+    server1 = new Eventcast(opts)
+    server2 = Eventcast(opts) // call without new
+
+    server1.start(function(){
+      server2.start(function() {
+        done()
+      })
+    })
+  })
+
+  afterEach(function(done) {
+    server1.stop(function(){
+      server2.stop(done)
+    })
+  })
+
+  ;[1, 10, 100, 1000].forEach(function (size) {
+    it(size + 'KB is received', function (done) {
+      this.timeout(3000)
+      
+      var messageCount = 0
+        , str = getBytes(1024 * size)
+
+      assert.notEqual(server1.id, server2.id)
+
+      ;[server1, server2].forEach(function(server){
+        server.on('longstring', function(msg){
+          assert(msg === str)
+
+          if (++messageCount == 4) {
+            done()
+          }
+        })
+      })
+
+      server1.emit('longstring', str)
+      server2.emit('longstring', str)
+    })
+  })
+})
+
+
+
+
+
 describe('Start/stop', function () {
   it('do not require callbacks', function(done) {
     var opts = Eventcast.getRandomPort()
@@ -233,7 +485,7 @@ describe('Start/stop', function () {
         done()
       })
     })
-  });
+  })
 
   it('are idempotent', function(done) {
     var opts = Eventcast.getRandomPort()
@@ -256,7 +508,7 @@ describe('Start/stop', function () {
         done()
       })
     })
-  });
+  })
 
   it('does not leak memory', function(done) {
     this.slow(500)
@@ -353,51 +605,6 @@ describe('Errors', function () {
       
       Eventcast.protocolVersion = 420
     })
-    
-    // this one should test for bad encryption
-//    it('invalid encryption version', function (done) {
-//      this.slow(500)
-//
-//      var once = true
-//        , count = 0
-//
-//      server1.on('error', function(e) {
-//        assert(e.code === 'EENCRYPT')
-//        server1.config.encrypt = false
-//        
-//        // wait for 'foo' to trigger, just in case
-//        setTimeout(function() {
-//          if (++count == 2) done()
-//        }, 200)
-//      })
-//
-//      server2.on('error', function(e) {
-//        assert(e.code === 'EENCRYPT')
-//        server2.config.encrypt = false
-//
-//        // wait for 'foo' to trigger, just in case
-//        setTimeout(function() {
-//          if (++count == 2) done()
-//        }, 200)
-//      })
-//      
-//      server1.on('foo', function(msg) {
-//        assert(once)
-//        assert(msg === 'bar')
-//        once = !once
-//      })
-//
-//      server2.on('foo', function(msg) {
-//        assert(once)
-//        assert(msg === 'bar')
-//        once = !once
-//      })
-//      
-//      server1.emit('foo', 'bar')
-//      
-//      server1.config.encrypt = true
-//      server2.config.encrypt = true
-//    })
   })
 
   it('emit when server is stopped', function(done) {
@@ -453,10 +660,11 @@ describe('REPL', function() {
 
     setTimeout(function() {
       var sock = net.connect(33333)
+      sock.setNoDelay(true)
 
       sock.on('connect', function () {
         setTimeout(function() {
-          sock.destroy()
+          sock.end()
         }, 200)
       })
     }, 500)
