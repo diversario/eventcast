@@ -302,7 +302,7 @@ describe('Message chunking', function () {
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
+      var originalMessage = new Message.IncomingMessage(Message.getBuffer(new Message.IncomingMessage(_om[0])))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -394,7 +394,7 @@ describe('Message chunking', function () {
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(Message.getBuffered(new Message.IncomingMessage(_om[0])))
+      var originalMessage = new Message.IncomingMessage(Message.getBuffer(new Message.IncomingMessage(_om[0])))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
