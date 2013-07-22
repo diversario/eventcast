@@ -1,6 +1,7 @@
 var Eventcast = require('../')
   , assert = require('assert')
   , net = require('net')
+  , crypto = require('crypto')
 
 function getOpts(custom) {
   var opts = {
@@ -46,6 +47,7 @@ function checkMeta(msg, opts) {
 function getBytes(n) {
   var s = ''
   
+//  while (s.length < n) s += crypto.randomBytes(1).toString('utf8')
   while (s.length < n) s += 'a'
   return s
 }
@@ -295,14 +297,18 @@ describe('Message chunking', function () {
         getAddress: function(){return 'localhost:123'}
       })
 
+      var MessageBuffer = require('../lib/MessageBuffer')
+      
       var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
-
-      _om.forEach(function (m) {
-        Message.buffer(new Message.IncomingMessage(m))
+      var mb = new MessageBuffer({})
+      
+      _om.forEach(function (_m) {
+        var m = new Message.IncomingMessage(_m)
+        mb.buffer(m, m.meta().seqId, m.meta().seq)
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(Message.getBuffer(new Message.IncomingMessage(_om[0])))
+      var originalMessage = new Message.IncomingMessage(mb.getBuffer(new Message.IncomingMessage(_om[0]).meta().seqId))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -387,14 +393,18 @@ describe('Message chunking', function () {
         getAddress: function(){return 'localhost:123'}
       })
 
-      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+      var MessageBuffer = require('../lib/MessageBuffer')
 
-      _om.forEach(function (m) {
-        Message.buffer(new Message.IncomingMessage(m))
+      var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
+      var mb = new MessageBuffer({})
+
+      _om.forEach(function (_m) {
+        var m = new Message.IncomingMessage(_m)
+        mb.buffer(m, m.meta().seqId, m.meta().seq)
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(Message.getBuffer(new Message.IncomingMessage(_om[0])))
+      var originalMessage = new Message.IncomingMessage(mb.getBuffer(new Message.IncomingMessage(_om[0]).meta().seqId))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -465,6 +475,88 @@ describe('Multipart data', function () {
 })
 
 
+
+
+describe('Missing packets', function () {
+  var opts, server1, server2
+    , async = require('async')
+
+  beforeEach(function(done) {
+    opts = getOpts()
+
+    server1 = new Eventcast(opts)
+    server2 = Eventcast(opts) // call without new
+
+    server1.start(function(){
+      server2.start(function() {
+        done()
+      })
+    })
+  })
+
+  afterEach(function(done) {
+    server1.stop(function(){
+      server2.stop(done)
+    })
+  })
+
+  it('incomplete messages expire after a timeout', function (done) {
+    this.timeout(10000)
+    
+    var droppedPackets = []
+      , emits = 0
+      , str = getBytes(1024 * 10)
+
+    server2.messageBuffer.on('miss', function (seqId, missedSeq) {
+      emits++
+      assert.deepEqual(droppedPackets, missedSeq);
+      assert(server2.messageBuffer._messages[seqId])
+      assert(server2.messageBuffer._expired.indexOf(seqId) === -1)
+    })
+    
+    server2.messageBuffer.on('expired', function (seqId) {
+      emits++
+      assert(!server2.messageBuffer._messages[seqId])
+      assert(server2.messageBuffer._expired.indexOf(seqId) !== -1)
+
+      if (emits === 2) done()
+    })
+
+    server1._dispatchMessage = function (event) {
+      var self = this
+        , message
+        , seq = 0
+
+      var msg = new this.Message.OutgoingMessage(
+        event.name,
+        event.payload
+      )
+
+      if (msg.toBuffer().length > this.config.maxPayloadSize) {
+        message = msg.toChunks(this.config.maxPayloadSize)
+      } else {
+        message = [msg.toBuffer()]
+      }
+      
+      async.eachSeries(message, function(m, cb) {
+        if (seq % 2 == 0 && seq !== 6) {
+          self.server.send(m, 0, m.length, self.config.port, self.config.multicastMembership, function () {
+              setImmediate(cb)
+            }
+          )
+        } else {
+          droppedPackets.push(seq)
+        }
+        seq++
+        cb()
+      }, function(err) {assert(!err)})
+    }
+    
+    setImmediate(function () {
+      server1.emit('longstring', str)
+    })
+  })
+})
 
 
 
