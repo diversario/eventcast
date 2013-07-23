@@ -250,7 +250,8 @@ describe('Message chunking', function () {
         , lastSeqEnd
         , totalMsg = om.length
 
-      om.forEach(function (m, idx) {
+      om.forEach(function (_m, idx) {
+        var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
         var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
 
@@ -302,13 +303,13 @@ describe('Message chunking', function () {
       var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
       var mb = new MessageBuffer({})
       
-      _om.forEach(function (_m) {
-        var m = new Message.IncomingMessage(_m)
-        mb.buffer(m, m.meta().seqId, m.meta().seq)
+      _om.forEach(function (m) {
+        var im = new Message.IncomingMessage(m.toBuffer())
+        mb.bufferIncoming(im, im.meta().seqId, im.meta().seq)
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(mb.getBuffer(new Message.IncomingMessage(_om[0]).meta().seqId))
+      var originalMessage = new Message.IncomingMessage(mb.getIncomingBuffer(_om[0].meta().seqId))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -346,7 +347,8 @@ describe('Message chunking', function () {
         , lastSeqEnd
         , totalMsg = om.length
 
-      om.forEach(function (m, idx) {
+      om.forEach(function (_m, idx) {
+        var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
         var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
 
@@ -398,13 +400,13 @@ describe('Message chunking', function () {
       var _om = new Message.OutgoingMessage('msg', '123456789').toChunks()
       var mb = new MessageBuffer({})
 
-      _om.forEach(function (_m) {
-        var m = new Message.IncomingMessage(_m)
-        mb.buffer(m, m.meta().seqId, m.meta().seq)
+      _om.forEach(function (m) {
+        var im = new Message.IncomingMessage(m.toBuffer())
+        mb.bufferIncoming(im, im.meta().seqId, im.meta().seq)
       })
 
       // let IM handle the parsing here
-      var originalMessage = new Message.IncomingMessage(mb.getBuffer(new Message.IncomingMessage(_om[0]).meta().seqId))
+      var originalMessage = new Message.IncomingMessage(mb.getIncomingBuffer(_om[0].meta().seqId))
 
       var omHeader = originalMessage.header()
       var omMeta = originalMessage.meta()
@@ -502,18 +504,17 @@ describe('Missing packets', function () {
 
   it('incomplete messages expire after a timeout', function (done) {
     this.timeout(10000)
-    
-    var droppedPackets = []
+
+    var sentPackets = []
       , emits = 0
       , str = getBytes(1024 * 10)
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       emits++
-      assert.deepEqual(droppedPackets, missedSeq);
       assert(server2.messageBuffer._messages[seqId])
       assert(server2.messageBuffer._expired.indexOf(seqId) === -1)
     })
-    
+
     server2.messageBuffer.on('expired', function (seqId) {
       emits++
       assert(!server2.messageBuffer._messages[seqId])
@@ -525,7 +526,51 @@ describe('Missing packets', function () {
     server1._dispatchMessage = function (event) {
       var self = this
         , message
-        , seq = 0
+
+      var msg = new this.Message.OutgoingMessage(
+        event.name,
+        event.payload
+      )
+
+      if (msg.toBuffer().length > this.config.maxPayloadSize) {
+        message = msg.toChunks(this.config.maxPayloadSize)
+      } else {
+        message = [msg.toBuffer()]
+      }
+
+      async.eachSeries(message, function(_m, cb) {
+        var m = _m.toBuffer()
+        if (process.hrtime()[1] % 2 === 0) {
+          self.server.send(m, 0, m.length, self.config.port, self.config.multicastMembership, function () {
+              sentPackets.push(_m.meta().seq)
+              setImmediate(cb)
+            }
+          )
+        }
+        cb()
+      }, function(err) {assert(!err)})
+    }
+
+    setImmediate(function () {
+      server1.emit('longstring', str)
+    })
+  })
+  
+  it('`miss` emits array of missing seq numbers', function (done) {
+    this.timeout(10000)
+    
+    var sentPackets = []
+      , str = getBytes(1024 * 10)
+
+    server2.messageBuffer.on('miss', function (seqId, missedSeq) {
+      var merged = sentPackets.concat(missedSeq).sort()
+      assert(merged.length == sentPackets[sentPackets.length-1]+1);
+      done()
+    })
+    
+    server1._dispatchMessage = function (event) {
+      var self = this
+        , message
 
       var msg = new this.Message.OutgoingMessage(
         event.name,
@@ -538,16 +583,15 @@ describe('Missing packets', function () {
         message = [msg.toBuffer()]
       }
       
-      async.eachSeries(message, function(m, cb) {
-        if (seq % 2 == 0 && seq !== 6) {
+      async.eachSeries(message, function(_m, cb) {
+        var m = _m.toBuffer()
+        if (process.hrtime()[1] % 2 === 0) {
           self.server.send(m, 0, m.length, self.config.port, self.config.multicastMembership, function () {
+              sentPackets.push(_m.meta().seq)
               setImmediate(cb)
             }
           )
-        } else {
-          droppedPackets.push(seq)
         }
-        seq++
         cb()
       }, function(err) {assert(!err)})
     }
