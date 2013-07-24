@@ -242,7 +242,7 @@ describe('Message chunking', function () {
     it('Returns an array of messages with chunked payload', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: false, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
@@ -295,7 +295,8 @@ describe('Message chunking', function () {
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -303,7 +304,7 @@ describe('Message chunking', function () {
     it('Same test but using IncomingMessage', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: false, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var MessageBuffer = require('../lib/MessageBuffer')
@@ -327,7 +328,8 @@ describe('Message chunking', function () {
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -339,7 +341,7 @@ describe('Message chunking', function () {
     it('Returns an array of messages with chunked payload', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: {key: 'WIKILEAKS'}, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
@@ -392,7 +394,8 @@ describe('Message chunking', function () {
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -400,7 +403,7 @@ describe('Message chunking', function () {
     it('Same test but using IncomingMessage', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: {key: 'SNIFF THIS'}, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var MessageBuffer = require('../lib/MessageBuffer')
@@ -424,7 +427,8 @@ describe('Message chunking', function () {
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -519,13 +523,13 @@ describe('Missing packets', function () {
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       emits++
-      assert(server2.messageBuffer._messages[seqId])
+      assert(server2.messageBuffer._incomingMessages[seqId])
       assert(server2.messageBuffer._expired.indexOf(seqId) === -1)
     })
 
     server2.messageBuffer.on('expired', function (seqId) {
       emits++
-      assert(!server2.messageBuffer._messages[seqId])
+      assert(!server2.messageBuffer._incomingMessages[seqId])
       assert(server2.messageBuffer._expired.indexOf(seqId) !== -1)
 
       if (emits === 2) done()
@@ -545,7 +549,9 @@ describe('Missing packets', function () {
       } else {
         message = [msg.toBuffer()]
       }
-
+      
+      this.messageBuffer.bufferOutgoing(message)
+      
       async.eachSeries(message, function(_m, cb) {
         var m = _m.toBuffer()
         if (process.hrtime()[1] % 2 === 0) {
@@ -568,7 +574,7 @@ describe('Missing packets', function () {
     this.timeout(10000)
     
     var sentPackets = []
-      , str = getBytes(1024 * 10)
+      , str = getBytes(1024 * 100)
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       var merged = sentPackets.concat(missedSeq).sort()
@@ -590,6 +596,8 @@ describe('Missing packets', function () {
       } else {
         message = [msg.toBuffer()]
       }
+
+      this.messageBuffer.bufferOutgoing(message)
       
       async.eachSeries(message, function(_m, cb) {
         var m = _m.toBuffer()
@@ -604,6 +612,59 @@ describe('Missing packets', function () {
       }, function(err) {assert(!err)})
     }
     
+    setImmediate(function () {
+      server1.emit('longstring', str)
+    })
+  })
+
+  it.only('request retransmission of lost packets', function (done) {
+    this.timeout(10000)
+
+    var str = getBytes(1024 * 100)
+      , events = []
+
+    server2.messageBuffer.on('miss', function (seqId) {
+      events.push('miss')
+    })
+    
+    server1.on('__ec_retx', function (req) {
+      events.push('__ec_retx')
+    })
+    
+    server2.on('longstring', function (_str) {
+      assert(str === _str)
+      done()
+    })
+    
+    server1._dispatchMessage = function (event) {
+      var self = this
+        , message
+
+      var msg = new this.Message.OutgoingMessage(
+        event.name,
+        event.payload
+      )
+
+      if (msg.toBuffer().length > this.config.maxPayloadSize) {
+        message = msg.toChunks(this.config.maxPayloadSize)
+      } else {
+        message = [msg.toBuffer()]
+      }
+
+      this.messageBuffer.bufferOutgoing(message)
+      
+      async.eachSeries(message, function(_m, cb) {
+        var m = _m.toBuffer()
+        if (process.hrtime()[1] % 2 === 0) {
+          self.server.send(m, 0, m.length, self.config.port, self.config.multicastMembership, function () {
+              setImmediate(cb)
+            }
+          )
+        }
+        cb()
+      }, function(err) {assert(!err)})
+    }
+
     setImmediate(function () {
       server1.emit('longstring', str)
     })
