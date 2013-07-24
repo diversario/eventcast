@@ -1,7 +1,7 @@
 var Eventcast = require('../')
   , assert = require('assert')
   , net = require('net')
-  , crypto = require('crypto')
+  , BSON = require('bson').BSONPure.BSON
 
 function getOpts(custom) {
   var opts = {
@@ -118,25 +118,33 @@ describe('Sending events', function () {
 
     it('can see each other, multiple arguments', function (done) {
       var messageCount = 0
+        , _date = new Date()
+        , _rx = /serialize me please/
 
       assert.notEqual(server1.id, server2.id)
 
       ;[server1, server2].forEach(function(server){
-        server.on('heyoo', function(obj, arr, nul, str, num){
+        server.on('heyoo', function(obj, arr, nul, str, num, date, rx){
           assert.deepEqual(obj, {obj: 2})
           assert.deepEqual(arr, [1,2,3])
           assert.strictEqual(nul, null)
           assert.strictEqual(str, 'yay')
           assert.strictEqual(num, 5)
+          
+          assert.strictEqual(_date.getTime(), date.getTime())
+          assert(date instanceof Date)
 
+          assert.strictEqual(_rx.toString(), rx.toString())
+          assert(rx instanceof RegExp)
+          
           if (++messageCount == 4) {
             done()
           }
         })
       })
 
-      server1.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5)
-      server2.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5)
+      server1.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5, _date, _rx)
+      server2.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5, _date, _rx)
     })
   })
 
@@ -253,7 +261,7 @@ describe('Message chunking', function () {
       om.forEach(function (_m, idx) {
         var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
-        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+        var meta = BSON.deserialize(m.slice(2, 2+metaLength))
 
         if (idx === 0) {
           lastSeq = meta.seq
@@ -273,7 +281,7 @@ describe('Message chunking', function () {
 
       // slice out the payload
       var header = reassembledMessage.slice(0, 2)
-      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var meta = BSON.deserialize(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
       var payload = reassembledMessage.slice(2 + meta.length)
 
       // let IM handle the parsing here
@@ -283,7 +291,7 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
@@ -315,7 +323,7 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
@@ -350,7 +358,7 @@ describe('Message chunking', function () {
       om.forEach(function (_m, idx) {
         var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
-        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+        var meta = BSON.deserialize(m.slice(2, 2+metaLength))
 
         if (idx === 0) {
           lastSeq = meta.seq
@@ -370,7 +378,7 @@ describe('Message chunking', function () {
 
       // slice out the payload
       var header = reassembledMessage.slice(0, 2)
-      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var meta = BSON.deserialize(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
       var payload = reassembledMessage.slice(2 + meta.length)
 
       // let IM handle the parsing here
@@ -380,7 +388,7 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
@@ -412,7 +420,7 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)

@@ -11,7 +11,7 @@ npm install eventcast
 ```
 ## How it works
 
-Eventcast uses UDP multicast to send messages to multiple nodes and to receive them. The goal is to provide a network event emitter where nodes can dynamically exchange data via familiar event API.
+Eventcast uses UDP multicast to send BSON-serialized messages to multiple nodes and to receive them. The goal is to provide a network event emitter where nodes can dynamically exchange data via familiar event API.
 
 Checkout [example](example/) folder to see it in action.
 
