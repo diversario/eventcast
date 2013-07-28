@@ -574,11 +574,12 @@ describe('Missing packets', function () {
     this.timeout(10000)
     
     var sentPackets = []
+      , totalPackets
       , str = getBytes(1024 * 100)
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       var merged = sentPackets.concat(missedSeq).sort()
-      assert(merged.length == sentPackets[sentPackets.length-1]+1);
+      assert(merged.length == totalPackets);
       done()
     })
     
@@ -597,6 +598,8 @@ describe('Missing packets', function () {
         message = [msg.toBuffer()]
       }
 
+      totalPackets = message.length
+      
       this.messageBuffer.bufferOutgoing(message)
       
       async.eachSeries(message, function(_m, cb) {
@@ -617,13 +620,13 @@ describe('Missing packets', function () {
     })
   })
 
-  it.only('request retransmission of lost packets', function (done) {
-    this.timeout(10000)
+  it.skip('request retransmission of lost packets', function (done) {
+    this.timeout(15000)
 
     var str = getBytes(1024 * 100)
       , events = []
 
-    server2.messageBuffer.on('miss', function (seqId) {
+    server1.messageBuffer.on('miss', function (seqId) {
       events.push('miss')
     })
     
@@ -631,9 +634,9 @@ describe('Missing packets', function () {
       events.push('__ec_retx')
     })
     
-    server2.on('longstring', function (_str) {
-      assert(str === _str)
-      done()
+    server1.on('longstring', function (_str) {
+      assert((str + 'linux') === _str)
+      setTimeout(done, 5000)
     })
     
     server1._dispatchMessage = function (event) {
@@ -656,18 +659,16 @@ describe('Missing packets', function () {
       async.eachSeries(message, function(_m, cb) {
         var m = _m.toBuffer()
         if (process.hrtime()[1] % 2 === 0) {
-          self.server.send(m, 0, m.length, self.config.port, self.config.multicastMembership, function () {
-              setImmediate(cb)
-            }
-          )
+          self._send(m, self.config.multicastMembership, self.config.port, cb)
+        } else {
+          cb()
         }
-        cb()
       }, function(err) {assert(!err)})
     }
 
-    setImmediate(function () {
-      server1.emit('longstring', str)
-    })
+    setTimeout(function () {
+      server1.emit('longstring1', str + 'osx')
+    }, 5000)
   })
 })
 
