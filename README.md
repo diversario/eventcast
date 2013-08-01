@@ -18,6 +18,9 @@ Eventcast uses UDP multicast to send BSON-serialized messages to multiple nodes 
 
 Checkout [example](example/) folder to see it in action.
 
+## Security
+`eventcast` uses optional `aes128` message encryption. Packets encrypted with user-provided passphrase. When encryption is enabled `eventcast` adds a nonce to every packet (nonce is created using `crypto.randomBytes`).
+
 ## Usage
 
 Create an instance of `eventcast` and add some events:
