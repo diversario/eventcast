@@ -21,6 +21,12 @@ Checkout [example](example/) folder to see it in action.
 ## Security
 `eventcast` uses optional `aes128` message encryption. Packets encrypted with user-provided passphrase. When encryption is enabled `eventcast` adds a nonce to every packet (nonce is created using `crypto.randomBytes`).
 
+## Message segmentation
+Multicast does not typically support messages over ~1500 bytes as far as I know. Messages that exceed MTU size will be silently dropped. `eventcast` uses message segmentation for messages larger than `maxPayloadSize` (defaults to 1024). Message is reassembled on the receiving end.
+
+## Packet loss
+When receiving segmented messages `eventcast` will request retransmission of any lost segments (TODO: max number of retransmission requests).
+
 ## Usage
 
 Create an instance of `eventcast` and add some events:
