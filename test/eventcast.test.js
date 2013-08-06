@@ -1,7 +1,7 @@
 var Eventcast = require('../')
   , assert = require('assert')
   , net = require('net')
-  , crypto = require('crypto')
+  , BSON = require('bson').BSONPure.BSON
 
 function getOpts(custom) {
   var opts = {
@@ -118,25 +118,33 @@ describe('Sending events', function () {
 
     it('can see each other, multiple arguments', function (done) {
       var messageCount = 0
+        , _date = new Date()
+        , _rx = /serialize me please/
 
       assert.notEqual(server1.id, server2.id)
 
       ;[server1, server2].forEach(function(server){
-        server.on('heyoo', function(obj, arr, nul, str, num){
+        server.on('heyoo', function(obj, arr, nul, str, num, date, rx){
           assert.deepEqual(obj, {obj: 2})
           assert.deepEqual(arr, [1,2,3])
           assert.strictEqual(nul, null)
           assert.strictEqual(str, 'yay')
           assert.strictEqual(num, 5)
+          
+          assert.strictEqual(_date.getTime(), date.getTime())
+          assert(date instanceof Date)
 
+          assert.strictEqual(_rx.toString(), rx.toString())
+          assert(rx instanceof RegExp)
+          
           if (++messageCount == 4) {
             done()
           }
         })
       })
 
-      server1.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5)
-      server2.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5)
+      server1.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5, _date, _rx)
+      server2.emit('heyoo', {obj: 2}, [1,2,3], null, 'yay', 5, _date, _rx)
     })
   })
 
@@ -234,7 +242,7 @@ describe('Message chunking', function () {
     it('Returns an array of messages with chunked payload', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: false, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
@@ -253,7 +261,7 @@ describe('Message chunking', function () {
       om.forEach(function (_m, idx) {
         var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
-        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+        var meta = BSON.deserialize(m.slice(2, 2+metaLength))
 
         if (idx === 0) {
           lastSeq = meta.seq
@@ -273,7 +281,7 @@ describe('Message chunking', function () {
 
       // slice out the payload
       var header = reassembledMessage.slice(0, 2)
-      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var meta = BSON.deserialize(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
       var payload = reassembledMessage.slice(2 + meta.length)
 
       // let IM handle the parsing here
@@ -283,11 +291,12 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -295,7 +304,7 @@ describe('Message chunking', function () {
     it('Same test but using IncomingMessage', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: false, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var MessageBuffer = require('../lib/MessageBuffer')
@@ -315,11 +324,12 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -331,7 +341,7 @@ describe('Message chunking', function () {
     it('Returns an array of messages with chunked payload', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: {key: 'WIKILEAKS'}, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var om = new Message.OutgoingMessage('msg', '123456789').toChunks()
@@ -350,7 +360,7 @@ describe('Message chunking', function () {
       om.forEach(function (_m, idx) {
         var m = _m.toBuffer()
         var metaLength = m.slice(0,2).readInt16BE(0)
-        var meta = JSON.parse(m.slice(2, 2+metaLength).toString())
+        var meta = BSON.deserialize(m.slice(2, 2+metaLength))
 
         if (idx === 0) {
           lastSeq = meta.seq
@@ -370,7 +380,7 @@ describe('Message chunking', function () {
 
       // slice out the payload
       var header = reassembledMessage.slice(0, 2)
-      var meta = JSON.parse(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
+      var meta = BSON.deserialize(reassembledMessage.slice(2, 2 + header.readInt16BE(0)))
       var payload = reassembledMessage.slice(2 + meta.length)
 
       // let IM handle the parsing here
@@ -380,11 +390,12 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -392,7 +403,7 @@ describe('Message chunking', function () {
     it('Same test but using IncomingMessage', function () {
       var Message = require('../lib/Message')({
         config: {encrypt: {key: 'SNIFF THIS'}, maxPayloadSize: 3},
-        getAddress: function(){return 'localhost:123'}
+        getAddress: function(){return {host: 'localhost', port: 123}}
       })
 
       var MessageBuffer = require('../lib/MessageBuffer')
@@ -412,11 +423,12 @@ describe('Message chunking', function () {
       var omMeta = originalMessage.meta()
       var omPayload = originalMessage.payload()
 
-      assert(omHeader.metaLength === JSON.stringify(omMeta).length)
+      assert(omHeader.metaLength === BSON.serialize(omMeta).length)
 
       assert(omMeta.name === 'msg')
       assert(omMeta.seq === 0)
-      assert(omMeta.address === 'localhost:123')
+      assert(omMeta.host === 'localhost')
+      assert(omMeta.port === 123)
 
       assert(omPayload === '123456789')
     })
@@ -511,13 +523,13 @@ describe('Missing packets', function () {
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       emits++
-      assert(server2.messageBuffer._messages[seqId])
+      assert(server2.messageBuffer._incomingMessages[seqId])
       assert(server2.messageBuffer._expired.indexOf(seqId) === -1)
     })
 
     server2.messageBuffer.on('expired', function (seqId) {
       emits++
-      assert(!server2.messageBuffer._messages[seqId])
+      assert(!server2.messageBuffer._incomingMessages[seqId])
       assert(server2.messageBuffer._expired.indexOf(seqId) !== -1)
 
       if (emits === 2) done()
@@ -537,7 +549,9 @@ describe('Missing packets', function () {
       } else {
         message = [msg.toBuffer()]
       }
-
+      
+      this.messageBuffer.bufferOutgoing(message)
+      
       async.eachSeries(message, function(_m, cb) {
         var m = _m.toBuffer()
         if (process.hrtime()[1] % 2 === 0) {
@@ -560,11 +574,12 @@ describe('Missing packets', function () {
     this.timeout(10000)
     
     var sentPackets = []
-      , str = getBytes(1024 * 10)
+      , totalPackets
+      , str = getBytes(1024 * 100)
 
     server2.messageBuffer.on('miss', function (seqId, missedSeq) {
       var merged = sentPackets.concat(missedSeq).sort()
-      assert(merged.length == sentPackets[sentPackets.length-1]+1);
+      assert(merged.length == totalPackets);
       done()
     })
     
@@ -582,6 +597,10 @@ describe('Missing packets', function () {
       } else {
         message = [msg.toBuffer()]
       }
+
+      totalPackets = message.length
+      
+      this.messageBuffer.bufferOutgoing(message)
       
       async.eachSeries(message, function(_m, cb) {
         var m = _m.toBuffer()
@@ -599,6 +618,57 @@ describe('Missing packets', function () {
     setImmediate(function () {
       server1.emit('longstring', str)
     })
+  })
+
+  it.skip('request retransmission of lost packets', function (done) {
+    this.timeout(15000)
+
+    var str = getBytes(1024 * 100)
+      , events = []
+
+    server1.messageBuffer.on('miss', function (seqId) {
+      events.push('miss')
+    })
+    
+    server1.on('__ec_retx', function (req) {
+      events.push('__ec_retx')
+    })
+    
+    server1.on('longstring', function (_str) {
+      assert((str + 'linux') === _str)
+      setTimeout(done, 5000)
+    })
+    
+    server1._dispatchMessage = function (event) {
+      var self = this
+        , message
+
+      var msg = new this.Message.OutgoingMessage(
+        event.name,
+        event.payload
+      )
+
+      if (msg.toBuffer().length > this.config.maxPayloadSize) {
+        message = msg.toChunks(this.config.maxPayloadSize)
+      } else {
+        message = [msg.toBuffer()]
+      }
+
+      this.messageBuffer.bufferOutgoing(message)
+      
+      async.eachSeries(message, function(_m, cb) {
+        var m = _m.toBuffer()
+        if (process.hrtime()[1] % 2 === 0) {
+          self._send(m, self.config.multicastMembership, self.config.port, cb)
+        } else {
+          cb()
+        }
+      }, function(err) {assert(!err)})
+    }
+
+    setTimeout(function () {
+      server1.emit('longstring1', str + 'osx')
+    }, 5000)
   })
 })
 
