@@ -861,7 +861,8 @@ describe('REPL', function() {
     var counter = 0
     
     var server1 = new Eventcast({
-      replPort: 33333
+      replPort: 33333,
+      replEnabled: true
     })
 
     setTimeout(function() {

@@ -1,6 +1,6 @@
 {
   "name": "eventcast",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Events over multicast",
   "main": "index.js",
   "scripts": {
