@@ -5,7 +5,8 @@ var Eventcast = require('../')
 
 function getOpts(custom) {
   var opts = {
-    port: custom && custom.port || Eventcast.getRandomPort()
+    port: custom && custom.port || Eventcast.getRandomPort(),
+    log: custom && custom.log
   }
   
   custom && Object.keys(custom).forEach(function (k) {
@@ -826,28 +827,27 @@ describe('Errors', function () {
 
 describe('Log level', function() {
   it('get', function() {
-    var server1 = new Eventcast()
+    var server1 = new Eventcast({log: true})
     
-    // 60 because it's set in lib/Logger to 60 when NODE_ENV=test
-    assert.deepEqual(server1.logLevel(), [60])
+    assert.deepEqual(server1.logLevel(), [50])
   })
   
   it('set level', function() {
-    var server1 = new Eventcast()
+    var server1 = new Eventcast({log: true})
 
     server1.logLevel(50)
     assert.deepEqual(server1.logLevel(), [50])
   })
   
   it('set level and component', function() {
-    var server1 = new Eventcast()
+    var server1 = new Eventcast({log: true})
 
     server1.logLevel('eventcast', 50)
     assert.deepEqual(server1.logLevel(), [50])
   })
   
   it('set invalid', function() {
-    var server1 = new Eventcast()
+    var server1 = new Eventcast({log: true})
 
     // nothing happens
     server1.logLevel(9001)
