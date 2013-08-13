@@ -1,6 +1,6 @@
 {
   "name": "eventcast",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Events over multicast",
   "main": "index.js",
   "scripts": {
@@ -23,10 +23,10 @@
   "dependencies": {
     "lodash": "1.3.x",
     "ip": "0.1.x",
-    "bson": "~0.1.9",
+    "bson": "~0.2.2",
     "bunyan": "~0.21.4",
     "bunyan-prettystream": "~0.1.2",
-    "replize": "0.0.4",
+    "replize": "0.0.5",
     "async": "~0.2.9"
   },
   "devDependencies": {
