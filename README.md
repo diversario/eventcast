@@ -75,6 +75,8 @@ eventcast>
 - `encrypt.key` _string_ Passphrase to use for encryption. No default.
 - `maxPayloadSize` _number_ Threshold in bytes above which messages will be chunked. Defaults to 1024. Multicast messages are best kept under ~1500 bytes to avoid silent packet loss.
 - `messageTtl` _number_ If chunked message is transmitted and no chunks received within this timeframe - message is discarded. Defaults to 3000 (3 seconds).
+- `log` _boolean_ Enable/disable logging. Default to `false`.
+- `logLevel` _string_ Log level.
 
 ## API
 Eventcast is an instance of Event Emitter, therefore it supports [Event Emitter API](http://nodejs.org/api/events.html). Internally, `#emit` is the only method that is not real EE method but a wrapper for `events.EventEmitter.emit` that first sends out messages and then emits the event.
