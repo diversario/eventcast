@@ -466,7 +466,7 @@ describe('Multipart data', function () {
 
   ;[1, 10, 100, 1000].forEach(function (size) {
     it(size + 'KB is received', function (done) {
-      this.timeout(3000)
+      this.timeout(6000)
       
       var messageCount = 0
         , str = getBytes(1024 * size)
