@@ -101,3 +101,8 @@ Starts the UDP server. `callback` will be called when server is bound and ready.
 
 ### Eventcast#stop([callback])
 Stops the UDP server. `callback` will be called when server is shutdown.
+
+## Tests
+`make test`
+
+Note that firewall can interfere with tests.
